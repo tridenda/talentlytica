@@ -1,103 +1,168 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useMemo, useCallback } from "react";
+
+// Define types
+interface Student {
+  id: number;
+  name: string;
+}
+
+interface Aspect {
+  id: number;
+  name: string;
+}
+
+type GradesState = {
+  [key: string]: number | "";
+};
+
+interface FormattedOutput {
+  [aspectKey: string]: {
+    [studentKey: string]: number;
+  };
+}
+
+export default function StudentGradingApp() {
+  // Daftar 10 mahasiswa
+  const students: Student[] = useMemo(
+    () => [
+      { id: 1, name: "Mahasiswa 1" },
+      { id: 2, name: "Mahasiswa 2" },
+      { id: 3, name: "Mahasiswa 3" },
+      { id: 4, name: "Mahasiswa 4" },
+      { id: 5, name: "Mahasiswa 5" },
+      { id: 6, name: "Mahasiswa 6" },
+      { id: 7, name: "Mahasiswa 7" },
+      { id: 8, name: "Mahasiswa 8" },
+      { id: 9, name: "Mahasiswa 9" },
+      { id: 10, name: "Mahasiswa 10" },
+    ],
+    []
+  );
+
+  // Aspek penilaian
+  const aspects: Aspect[] = useMemo(
+    () => [
+      { id: 1, name: "Aspek Penilaian 1" },
+      { id: 2, name: "Aspek Penilaian 2" },
+      { id: 3, name: "Aspek Penilaian 3" },
+      { id: 4, name: "Aspek Penilaian 4" },
+    ],
+    []
+  );
+
+  // State untuk menyimpan nilai
+  const [grades, setGrades] = useState<GradesState>({});
+  const [jsonOutput, setJsonOutput] = useState<FormattedOutput | null>(null);
+
+  // Fungsi untuk update nilai dengan useCallback untuk mencegah render berlebih
+  const updateGrade = useCallback(
+    (studentId: number, aspectId: number, value: string): void => {
+      setGrades((prevGrades) => ({
+        ...prevGrades,
+        [`${studentId}-${aspectId}`]: value === "" ? "" : parseInt(value, 10),
+      }));
+    },
+    []
+  );
+
+  // Fungsi untuk mendapatkan nilai
+  const getGrade = useCallback(
+    (studentId: number, aspectId: number): number | "" => {
+      return grades[`${studentId}-${aspectId}`] || "";
+    },
+    [grades]
+  );
+
+  // Handler untuk tombol Simpan
+  const handleSave = useCallback((): void => {
+    // Format data sesuai dengan format yang diminta
+    const formattedData: FormattedOutput = {};
+
+    aspects.forEach((aspect) => {
+      const aspectKey: string = aspect.name.toLowerCase().replace(/ /g, "_");
+      formattedData[aspectKey] = {};
+
+      students.forEach((student) => {
+        const grade = getGrade(student.id, aspect.id);
+        if (grade !== "") {
+          const studentKey: string = student.name
+            .toLowerCase()
+            .replace(/ /g, "_");
+          formattedData[aspectKey][studentKey] = grade as number;
+        }
+      });
+    });
+
+    setJsonOutput(formattedData);
+  }, [aspects, students, getGrade]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="p-6 max-w-6xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6 text-center">
+        Sistem Penilaian Mahasiswa
+      </h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <div className="overflow-x-auto mb-6">
+        <table className="min-w-full bg-white border border-gray-200">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="py-2 px-4 border">Nama Mahasiswa</th>
+              {aspects.map((aspect) => (
+                <th key={aspect.id} className="py-2 px-4 border">
+                  {aspect.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((student) => (
+              <tr key={student.id}>
+                <td className="py-2 px-4 border font-medium">{student.name}</td>
+                {aspects.map((aspect) => (
+                  <td key={aspect.id} className="py-2 px-4 border">
+                    <select
+                      value={getGrade(student.id, aspect.id).toString()}
+                      onChange={(e) =>
+                        updateGrade(student.id, aspect.id, e.target.value)
+                      }
+                      className="w-full p-1 border rounded"
+                    >
+                      <option defaultValue={0}>0</option>
+                      {[...Array(10)].map((_, i) => (
+                        <option key={i + 1} value={i + 1}>
+                          {i + 1}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-center">
+        <button
+          onClick={handleSave}
+          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        >
+          Simpan
+        </button>
+      </div>
+
+      {jsonOutput && (
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4">Output JSON:</h2>
+          <div className="bg-gray-800 text-green-400 p-4 rounded overflow-auto">
+            <pre className="whitespace-pre-wrap">
+              {JSON.stringify(jsonOutput, null, 2)}
+            </pre>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
     </div>
   );
 }
